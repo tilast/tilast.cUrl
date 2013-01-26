@@ -16,7 +16,7 @@ cURL – это специальный инструмент, который пр
 Конструктор принимает json-строку с параметрами для функции с библиотеки cUrl curl_setopt.
 [PHP мануал работы с cUrl](http://php.net/manual/en/book.curl.php)
 В качестве ключей надо передавать не обычные curl_setopt константы. Например, константу **CURLOPT_URL** надо передать
-просто как **url**, **CURLOPT_RETURNTRANSFER** - *returntransfer*.
+просто как **url**, **CURLOPT_RETURNTRANSFER** - **returntransfer**.
 Пример такой json-строки:
 
     {
