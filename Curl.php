@@ -49,6 +49,10 @@ class Curl
         if(!$params)
             throw new CurlParamsException("An array of parameters is empty");
 
+        // setting default parameters
+        $paramsArray[constant("CURLOPT_RETURNTRANSFER")] = "1";
+        $paramsArray[constant("CURLOPT_USERAGENT")] = "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17"; // will be changed
+
         // processing of input data
         $paramsArray = (is_array($params)) ? $params : json_decode($params, true);
         // array for wrong parameters, if they'll be exist
@@ -80,10 +84,6 @@ class Curl
             throw new CurlParamsException("parameter <b style='color: red'>".$keys."</b> is not exist");
         }
 
-        // setting default parameters
-        $paramsArray[constant("CURLOPT_RETURNTRANSFER")] = "1";
-        $paramsArray[constant("CURLOPT_USERAGENT")] = "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17"; // will be changed
-
         // setting of parameters
         curl_setopt_array($this->handler, $paramsArray);
 
@@ -101,6 +101,7 @@ class Curl
             throw new CurlPostException("post array is empty");
         else
         {
+            $postArray = (is_array) ? $postArray : json_decode($postArray, true);
             // create th post-query string
             $firstKey = key($postArray);
             $postStr = "";
@@ -141,8 +142,9 @@ class Curl
         curl_close($this->handler);
     }
 }
+
 /*
-    На счёт исключений еще хочу поговорить с Андреем, не знаю, как их по-правильному заполнять и какую инфу передавать
+    Exceptions
  */
 class CurlException extends Exception
 {
@@ -180,7 +182,8 @@ class CurlPostException extends CurlException
     }
 }
 
-/* Маленький пример работы */
+
+/* Little example of work */
 
 /*try
 {
@@ -190,7 +193,11 @@ class CurlPostException extends CurlException
         //'{"url":"http://google.com.ua/"}'
         array("url" => "http://google.com.ua/", "post" => "1")
     );
-    $curl->setPost(array("name" => "Ihor", "surname" => "Kroosh"));
+    $curl->setPost
+        (
+            array("name" => "Ihor", "surname" => "Kroosh")
+            // '{"name" : "Ihor", "surname" : "Kroosh"}'
+        );
     echo $curl->exec();
 }
 catch(CurlException $e)
