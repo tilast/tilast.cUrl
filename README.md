@@ -23,7 +23,7 @@ cURL – это специальный инструмент, который пр
     {
         "url" : "http://google.com.ua",
         "post" : "1",
-        "postfields" : "name=Ihor&surname=Kroosh"
+        "postfields" : "name=Some&surname=Body"
     }
     
 Пример массива:
@@ -32,7 +32,7 @@ cURL – это специальный инструмент, который пр
     (
         "url" => "http://google.com.ua",
         "post" => "1",
-        "postfields" => "name=Ihor&surname=Kroosh"
+        "postfields" => "name=Some&surname=Body"
     )
 
 Для работы с POST-запросами существует метод setPost. Детальнее о нем в пункте setPost.
@@ -50,8 +50,8 @@ cURL – это специальный инструмент, который пр
 
     $curl->setPost
     (
-        array("name" => "Ihor", "surname" => "Kroosh")
-        //'{"name" : "Ihor", "surname" : "Kroosh"}'
+        array("name" => "Some", "surname" => "Body")
+        //'{"name" : "Some", "surname" : "Body"}'
     );
 
 ### Exec
@@ -74,7 +74,7 @@ cURL – это специальный инструмент, который пр
     {
         $curl = new Curl
         ('{
-            "url":"http://localhost/ukraine/",
+            "url":"http://google.com.ua/",
             "returntransfer": true
         }');
         echo $curl->exec();
