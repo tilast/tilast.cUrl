@@ -101,7 +101,7 @@ class Curl
             throw new CurlPostException("post array is empty");
         else
         {
-            $postArray = (is_array) ? $postArray : json_decode($postArray, true);
+            $postArray = (is_array($postArray)) ? $postArray : json_decode($postArray, true);
             // create th post-query string
             $firstKey = key($postArray);
             $postStr = "";
