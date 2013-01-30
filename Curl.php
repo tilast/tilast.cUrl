@@ -12,8 +12,16 @@ class Curl
      */
     private $handler;
 
-    private static $defaultUA;
-    private static $defaultRT;
+
+    /**
+     * Массив стандартных настроек
+     * @var array
+     */
+    private static $defaultSet = array
+    (
+        "useragent" => "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17",
+        "returntransfer" => "1"
+    );
 
     /**
      * Constructor
@@ -33,12 +41,8 @@ class Curl
         if(!$this->handler)
             throw new CurlInitException("Can't create handler of curl connection");
 
-        self::$defaultUA = "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17";
-        self::$defaultRT = "1";
-
         // установка параметров по-умолчанию(можно изменить)
-        $this->setParam("useragent", self::$defaultUA);
-        $this->setParam("returntransfer", self::$defaultRT);
+        $this->setParams(self::$defaultSet);
 
         if($params)
             $this->setParams($params);
@@ -71,6 +75,11 @@ class Curl
         // пытаемя получить параметры
         foreach($paramsArray as $key => $value)
         {
+            // смотрим, не массив ли это для post-запроса
+            if($key == "postfields")
+            {
+                $value = $this->setPost($value);
+            }
 
             // записываем неверные параметры в $wrongParams
             if(!defined("CURLOPT_".strtoupper($key)))
@@ -114,29 +123,7 @@ class Curl
             // если "postfields" - обрабатывает соответственным образом
             if($paramName == "postfields")
             {
-                // проверка входных данных
-                if(empty($paramValue))
-                    throw new CurlPostException("post array is empty");
-                else
-                {
-                    // приводим к виду массива значение, если это возможно
-                    $paramValue = (is_array($paramValue)) ? $paramValue : json_decode($paramValue, true);
-                    if(!is_array($paramValue))
-                        throw new CurlParamsException("wrong json-string");
-
-                    // создаем строку post-запроса
-                    $notFirstKey = false;
-                    $postStr = "";
-                    foreach($paramValue as $key => $value)
-                    {
-                        if($notFirstKey)
-                            $postStr .= "&";
-
-                        $postStr .= urlencode($key)."=".urlencode($value);
-
-                        $notFirstKey = true;
-                    }
-                }
+                $paramValue = $this->setPost($paramValue);
             }
             // если нет - проверяем, существует ли такой параметр
             else
@@ -147,6 +134,34 @@ class Curl
             // и устанавливаем параметр
             curl_setopt($this->handler, constant("CURLOPT_".strtoupper($paramName)), $paramValue);
         }
+    }
+
+    /**
+     * Преображает массив или json-стрроку в строку curl-post запроса
+     * @param $paramValue массив или json-строка с post-инфой
+     * если $paramName == "postfields", то $paramValue должен быть передан как массив или json-строка с инфой для post-апроса
+     */
+
+    private function setPost($paramValue)
+    {
+        // приводим к виду массива значение, если это возможно
+        $paramValue = (is_array($paramValue)) ? $paramValue : json_decode($paramValue, true);
+        if(!is_array($paramValue))
+            throw new CurlParamsException("wrong json-string or array");
+
+        // создаем строку post-запроса
+        $notFirstKey = false;
+        $postStr = "";
+        foreach($paramValue as $key => $value)
+        {
+            if($notFirstKey)
+                $postStr .= "&";
+
+            $postStr .= urlencode($key)."=".urlencode($value);
+
+            $notFirstKey = true;
+        }
+        return $postStr;
     }
 
     /**
@@ -224,7 +239,7 @@ try
     $curl->setParams
     (
         //'{"url":"http://google.com.ua/"}'
-        array("url" => "http://google.com.ua/", "post" => "true", "postfields" => "name=Ihor&surname=Kroosh")
+        array("url" => "http://google.com.ua/", "post" => "true", "postfields" => array("name" => "John", "surname" => "Smith", "anotherWay" => "можно также передавать не массив для post, а json-строку"))
     );
     //$curl->setParam("postfields", array("name" => "John", "surname" => "Smith"));
     echo $curl->exec();
