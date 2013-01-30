@@ -1,34 +1,44 @@
 <?php
 
 /*
-    Class for working with the Curl library
+    Класс для работы с библиотекой cUrl
 */
 
 class Curl
 {
     /**
-     * Handler of this curl connection
+     * Дескриптор текущего curl-соединения
      * @var resource
      */
     private $handler;
 
+    private static $defaultUA;
+    private static $defaultRT;
+
     /**
      * Constructor
-     * parameters you must write without "CURLOPT_"-prefix
-     * @param json-string or array with the curl parameters $params
-     * example of json-string: '{"url":"http://google.com.ua/"}'
-     * example of array: array("url" => "http://google.com.ua/")
+     * параметры должны быть написаны без "CURLOPT_"-префикса
+     * @param json-строка или массив с curl-параметрами $params
+     * пример json-строки: '{"url":"http://google.com.ua/"}'
+     * пример массива: array("url" => "http://google.com.ua/")
      */
     function __construct($params = null)
     {
-        // initialize of curl
+        // инициализация curl
         if(!function_exists("curl_init"))
             throw new CurlInitException("Curl is not required to your server");
 
-        // create handler of this curl connection
+        // создания дескриптора этого curl-соединения
         $this->handler = curl_init();
         if(!$this->handler)
             throw new CurlInitException("Can't create handler of curl connection");
+
+        self::$defaultUA = "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17";
+        self::$defaultRT = "1";
+
+        // установка параметров по-умолчанию(можно изменить)
+        $this->setParam("useragent", self::$defaultUA);
+        $this->setParam("returntransfer", self::$defaultRT);
 
         if($params)
             $this->setParams($params);
@@ -36,87 +46,112 @@ class Curl
 
 
     /**
-     * Sets parameters of curl query
-     * parameters you must write without "CURLOPT_"-prefix
-     * @param json-string or array with the curl parameters $params
-     * example of json-string: '{"url":"http://google.com.ua/"}'
-     * example of array: array("url" => "http://google.com.ua/")
+     * Устанавливает параметры текущего curl-соединения
+     * параметры должны быть написанны без "CURLOPT_"-префикса
+     * @param json-строка или массив с curl-параметрами $params
+     * пример json-строки: '{"url":"http://google.com.ua/"}'
+     * пример массива: array("url" => "http://google.com.ua/")
      */
     public function setParams($params)
     {
 
-        // checking of input data
+        // проверка входящих данных
         if(!$params)
             throw new CurlParamsException("An array of parameters is empty");
 
-        // setting default parameters
-        $paramsArray[constant("CURLOPT_RETURNTRANSFER")] = "1";
-        $paramsArray[constant("CURLOPT_USERAGENT")] = "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17"; // will be changed
-
-        // processing of input data
+        // обработка входных данных
         $paramsArray = (is_array($params)) ? $params : json_decode($params, true);
-        // array for wrong parameters, if they'll be exist
+
+        if(!is_array($paramsArray))
+            throw new CurlParamsException("wrong json-string");
+
+        // массив для ошибочных параметров, если они будут
         $wrongParams = array();
 
-        // try getting parameters
+        // пытаемя получить параметры
         foreach($paramsArray as $key => $value)
         {
 
-            // write the wrong parameter into $wrongParams
+            // записываем неверные параметры в $wrongParams
             if(!defined("CURLOPT_".strtoupper($key)))
             {
                 $wrongParams[] = $key;
                 continue;
             }
 
-            // creating of array for curl_setopt_array
+            // создаем массив для curl_setopt_array
             $paramsArray[constant("CURLOPT_".strtoupper($key))] = $value;
 
-            // Remove unnecessary elements of the array. This string is important, because $paramsArray must have data for curl_setopt_array() function only
+            // Удаляем ненужные елементы массива. Эта строчка важна, ведь $paramsArray должен вмещать инфу только для функции curl_setopt_array()
             unset($paramsArray[$key]);
 
         }
 
-        // throwing of wrong parameters
+        // отловка неверных параметров
         if(!empty($wrongParams))
         {
             $keys = implode(", ", $wrongParams);
-            throw new CurlParamsException("parameter <b style='color: red'>".$keys."</b> is not exist");
+            throw new CurlParamsException("parameters ".$keys." not exist");
         }
 
-        // setting of parameters
+        // установка параметров
         curl_setopt_array($this->handler, $paramsArray);
 
     }
 
-
     /**
-     * @param $postArray - array for the POST-query
-     * Method adds the post-query to this curl connection
+     * Устанавливает параметр для текущего curl-соединения
+     * параметры должны быть написанны без "CURLOPT_"-префикса
+     * @param $paramName название параметра
+     * @param $paramValue значение
+     * если $paramName == "postfields", то $paramValue должен быть передан как массив или json-строка с инфой для post-апроса
      */
-    public function setPost($postArray)
+
+    public function setParam($paramName, $paramValue)
     {
-        // check input data
-        if(empty($postArray))
-            throw new CurlPostException("post array is empty");
-        else
+        if(!empty($paramName))
         {
-            $postArray = (is_array($postArray)) ? $postArray : json_decode($postArray, true);
-            // create th post-query string
-            $firstKey = key($postArray);
-            $postStr = "";
-            foreach($postArray as $key => $value)
+            // если "postfields" - обрабатывает соответственным образом
+            if($paramName == "postfields")
             {
-                $postStr .= ($firstKey == $key) ? $key."=".$value : "&".$key."=".$value;
+                // проверка входных данных
+                if(empty($paramValue))
+                    throw new CurlPostException("post array is empty");
+                else
+                {
+                    // приводим к виду массива значение, если это возможно
+                    $paramValue = (is_array($paramValue)) ? $paramValue : json_decode($paramValue, true);
+                    if(!is_array($paramValue))
+                        throw new CurlParamsException("wrong json-string");
+
+                    // создаем строку post-запроса
+                    $notFirstKey = false;
+                    $postStr = "";
+                    foreach($paramValue as $key => $value)
+                    {
+                        if($notFirstKey)
+                            $postStr .= "&";
+
+                        $postStr .= urlencode($key)."=".urlencode($value);
+
+                        $notFirstKey = true;
+                    }
+                }
             }
-            // set parameter
-            curl_setopt($this->handler, CURLOPT_POSTFIELDS, $postStr);
+            // если нет - проверяем, существует ли такой параметр
+            else
+            {
+                if(!defined("CURLOPT_".strtoupper($paramName)))
+                    throw new CurlParamsException("parameter ".$paramName." is not exist");
+            }
+            // и устанавливаем параметр
+            curl_setopt($this->handler, constant("CURLOPT_".strtoupper($paramName)), $paramValue);
         }
     }
 
     /**
-     * Execute of current curl query
-     * Returns the string variable with the content
+     * Выполнение текущего curl-запроса
+     * Returns возвращает строку с запрошенной инфой или ошибку
      */
     public function exec()
     {
@@ -127,7 +162,7 @@ class Curl
     }
 
     /**
-     * Method-wrapper for getting info about current curl query
+     * Метод-обертка функции curl_getinfo() для получения инфы о текущем curl запросе
      */
     public function getInfo()
     {
@@ -142,9 +177,8 @@ class Curl
         curl_close($this->handler);
     }
 }
-
 /*
-    Exceptions
+    Исключения
  */
 class CurlException extends Exception
 {
@@ -182,22 +216,17 @@ class CurlPostException extends CurlException
     }
 }
 
-
-/* Little example of work */
-
-/*try
+/* Маленький пример работы */
+/*
+try
 {
     $curl = new Curl();
     $curl->setParams
     (
         //'{"url":"http://google.com.ua/"}'
-        array("url" => "http://google.com.ua/", "post" => "1")
+        array("url" => "http://google.com.ua/", "post" => "true", "postfields" => "name=Ihor&surname=Kroosh")
     );
-    $curl->setPost
-        (
-            array("name" => "Ihor", "surname" => "Kroosh")
-            // '{"name" : "Ihor", "surname" : "Kroosh"}'
-        );
+    //$curl->setParam("postfields", array("name" => "John", "surname" => "Smith"));
     echo $curl->exec();
 }
 catch(CurlException $e)
