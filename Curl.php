@@ -139,7 +139,6 @@ class Curl
     /**
      * Преображает массив или json-стрроку в строку curl-post запроса
      * @param $paramValue массив или json-строка с post-инфой
-     * если $paramName == "postfields", то $paramValue должен быть передан как массив или json-строка с инфой для post-апроса
      */
 
     private function setPost($paramValue)
